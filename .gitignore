@@ -8,3 +8,5 @@
 /captures
 .externalNativeBuild
 .kotlin
+# local build trees and outputs (kept on disk, not in /tmp)
+/builds/
