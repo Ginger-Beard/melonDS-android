@@ -27,6 +27,7 @@
 #include "net/Net.h"
 #include "net/Net_Slirp.h"
 #include <fstream>
+#include <mutex>
 
 namespace MelonDSAndroid
 {
@@ -39,6 +40,13 @@ namespace MelonDSAndroid
     std::shared_ptr<Net> net;
 
     std::shared_ptr<MelonInstance> instance;
+
+    // Guards writes to `instance` against IR calls coming from non-emulator threads, and the IR TX sink
+    std::mutex irMutex;
+    IrLink::TxSink irTxSink;
+
+    void setInstance(std::shared_ptr<MelonInstance> newInstance);
+    std::shared_ptr<MelonInstance> getIrInstance();
 
     bool setupOpenGlContext();
     void cleanupOpenGlContext();
@@ -68,17 +76,17 @@ namespace MelonDSAndroid
         if (!instanceArgs.has_value())
         {
             // TODO: Handle this somehow?
-            instance = nullptr;
+            setInstance(nullptr);
             return;
         }
-        instance = std::make_shared<MelonInstance>(
+        setInstance(std::make_shared<MelonInstance>(
             instanceId,
             currentConfiguration,
             std::move(instanceArgs.value()),
             net,
             std::make_unique<ScreenshotRenderer>(screenshotBufferPointer),
             currentConfiguration->consoleType
-        );
+        ));
 
         setupAudio(currentConfiguration->audioSettings);
         setAudioActiveInstance(instance);
@@ -373,8 +381,54 @@ namespace MelonDSAndroid
     {
         cleanupAudio();
 
-        instance = nullptr;
+        setInstance(nullptr);
         eventMessenger = nullptr;
+    }
+
+    void setIrTxSink(IrLink::TxSink sink)
+    {
+        std::lock_guard<std::mutex> lock(irMutex);
+        irTxSink = std::move(sink);
+        if (instance)
+            instance->getIrLink().setTxSink(irTxSink);
+    }
+
+    void irPushPacket(const u8* data, int len)
+    {
+        if (auto irInstance = getIrInstance())
+            irInstance->getIrLink().pushReceived(data, len);
+    }
+
+    void irFlush()
+    {
+        if (auto irInstance = getIrInstance())
+            irInstance->getIrLink().flush();
+    }
+
+    bool isIrLinkRecentlyActive()
+    {
+        auto irInstance = getIrInstance();
+        return irInstance && irInstance->getIrLink().recentlyActive();
+    }
+
+    void setInstance(std::shared_ptr<MelonInstance> newInstance)
+    {
+        std::shared_ptr<MelonInstance> oldInstance;
+        {
+            std::lock_guard<std::mutex> lock(irMutex);
+            if (newInstance)
+                newInstance->getIrLink().setTxSink(irTxSink);
+
+            oldInstance = std::move(instance);
+            instance = std::move(newInstance);
+        }
+        // oldInstance is destroyed here, outside the lock
+    }
+
+    std::shared_ptr<MelonInstance> getIrInstance()
+    {
+        std::lock_guard<std::mutex> lock(irMutex);
+        return instance;
     }
 
     bool setupOpenGlContext()

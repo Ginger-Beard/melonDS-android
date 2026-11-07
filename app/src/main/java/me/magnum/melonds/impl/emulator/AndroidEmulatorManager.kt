@@ -29,6 +29,7 @@ import me.magnum.melonds.domain.model.rom.config.RuntimeEnum
 import me.magnum.melonds.domain.repositories.SettingsRepository
 import me.magnum.melonds.domain.services.EmulatorManager
 import me.magnum.melonds.impl.camera.DSiCameraSourceMultiplexer
+import me.magnum.melonds.ir.IrDongleManager
 import me.magnum.melonds.ui.emulator.rewind.model.RewindSaveState
 import me.magnum.melonds.ui.emulator.rewind.model.RewindWindow
 
@@ -40,6 +41,7 @@ class AndroidEmulatorManager(
     private val romFileProcessorFactory: RomFileProcessorFactory,
     private val permissionHandler: PermissionHandler,
     private val cameraManager: DSiCameraSourceMultiplexer,
+    private val irDongleManager: IrDongleManager,
 ) : EmulatorManager {
 
     private val _emulatorEvents = MutableSharedFlow<EmulatorEvent>(extraBufferCapacity = Int.MAX_VALUE)
@@ -90,7 +92,8 @@ class AndroidEmulatorManager(
             val fileRomProcessor = romFileProcessorFactory.getFileRomProcessorForDocument(fileRomDocument)
             val romUri = fileRomProcessor?.getRealRomUri(rom) ?: return@withContext RomLaunchResult.LaunchFailedRomNotSupported
 
-            setupEmulator(getRomEmulatorConfiguration(rom))
+            val emulatorConfiguration = getRomEmulatorConfiguration(rom)
+            setupEmulator(emulatorConfiguration)
 
             val sram = try {
                 sramProvider.getSramForRom(rom)
@@ -123,6 +126,8 @@ class AndroidEmulatorManager(
                 messageQueue.start()
                 MelonEmulator.setupCheats(cheats.toTypedArray())
                 MelonEmulator.startEmulation()
+                // Non-blocking: USB work happens on the IR dongle manager's own threads
+                irDongleManager.onEmulationStarted(emulatorConfiguration.irLinkMode)
 
                 RomLaunchResult.LaunchSuccessful(loadResult != MelonEmulator.LoadResult.SUCCESS_GBA_FAILED)
             }
@@ -148,6 +153,7 @@ class AndroidEmulatorManager(
     override suspend fun updateRomEmulatorConfiguration(rom: Rom) {
         val configuration = getRomEmulatorConfiguration(rom)
         MelonEmulator.updateEmulatorConfiguration(configuration)
+        irDongleManager.onIrLinkModeChanged(configuration.irLinkMode)
     }
 
     override suspend fun updateFirmwareEmulatorConfiguration(consoleType: ConsoleType) {
@@ -214,12 +220,15 @@ class AndroidEmulatorManager(
     }
 
     override fun stopEmulator() {
+        // Detach the IR link before the native instance goes away
+        irDongleManager.onEmulationStopped()
         MelonEmulator.stopEmulation()
         cameraManager.stopCurrentCameraSource()
         messageQueue.stop()
     }
 
     override fun cleanEmulator() {
+        irDongleManager.onEmulationStopped()
         cameraManager.dispose()
         messageQueue.cleanup()
     }

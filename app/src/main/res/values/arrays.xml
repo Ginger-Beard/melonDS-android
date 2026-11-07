@@ -87,6 +87,11 @@
         <item>device</item>
     </string-array>
 
+    <string-array name="ir_link_mode_values">
+        <item>off</item>
+        <item>usb_dongle</item>
+    </string-array>
+
     <string-array name="soft_input_behaviour">
         <item>always_visible</item>
         <item>hide_system_buttons_when_controller_connected</item>

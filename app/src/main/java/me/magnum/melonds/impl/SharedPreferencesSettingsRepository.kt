@@ -36,6 +36,7 @@ import me.magnum.melonds.domain.model.EmulatorConfiguration
 import me.magnum.melonds.domain.model.FirmwareConfiguration
 import me.magnum.melonds.domain.model.FpsCounterPosition
 import me.magnum.melonds.domain.model.MacAddress
+import me.magnum.melonds.domain.model.IrLinkMode
 import me.magnum.melonds.domain.model.MicSource
 import me.magnum.melonds.domain.model.RendererConfiguration
 import me.magnum.melonds.domain.model.rewind.RewindWindowPosition
@@ -171,6 +172,7 @@ class SharedPreferencesSettingsRepository(
             micSource = getMicSource(),
             firmwareConfiguration = getFirmwareConfiguration(),
             rendererConfiguration = renderConfigurationFlow.first(),
+            irLinkMode = getIrLinkMode(),
         )
     }
 
@@ -373,6 +375,11 @@ class SharedPreferencesSettingsRepository(
     override fun getMicSource(): MicSource {
         val micSourcePreference = preferences.getString("mic_source", "blow")!!
         return enumValueOfIgnoreCase(micSourcePreference)
+    }
+
+    override fun getIrLinkMode(): IrLinkMode {
+        val irLinkPreference = preferences.getString("ir_link_mode", "off")!!
+        return IrLinkMode.entries.firstOrNull { it.name.equals(irLinkPreference, ignoreCase = true) } ?: IrLinkMode.OFF
     }
 
     override fun getRomSortingMode(): SortingMode {

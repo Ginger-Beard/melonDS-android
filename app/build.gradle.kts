@@ -162,6 +162,7 @@ dependencies {
     implementation(libs.picasso)
     implementation(libs.commons.compress)
     implementation(libs.xz)
+    implementation(libs.usb.serial)
 
     "gitHubImplementation"(libs.retrofit)
     "gitHubImplementation"(libs.retrofit.converter.kotlinx)

@@ -29,6 +29,7 @@ import me.magnum.melonds.impl.emulator.SramProvider
 import me.magnum.melonds.impl.image.BitmapFactoryBitmapLoader
 import me.magnum.melonds.impl.image.BitmapLoader
 import me.magnum.melonds.impl.image.ImageDecoderBitmapLoader
+import me.magnum.melonds.ir.IrDongleManager
 
 
 @Module
@@ -117,6 +118,7 @@ object EmulatorRuntimeModule {
         romFileProcessorFactory: RomFileProcessorFactory,
         permissionHandler: PermissionHandler,
         cameraManagerMultiplexer: DSiCameraSourceMultiplexer,
+        irDongleManager: IrDongleManager,
     ): EmulatorManager {
         return AndroidEmulatorManager(
             context,
@@ -126,6 +128,7 @@ object EmulatorRuntimeModule {
             romFileProcessorFactory,
             permissionHandler,
             cameraManagerMultiplexer,
+            irDongleManager,
         )
     }
 

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    USB IR dongle (CDC-ACM). Keep in sync with IrDongleManager.USB_VENDOR_ID / USB_PRODUCT_ID.
+    0x303A:0x4001 is provisional (Espressif VID, TinyUSB-style PID); the app also checks the
+    dongle's IDENTIFY response before using it, so other boards sharing this ID are rejected.
+-->
+<resources>
+    <usb-device vendor-id="12346" product-id="16385" />
+</resources>

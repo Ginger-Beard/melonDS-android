@@ -149,6 +149,7 @@ bool MelonInstance::loadRom(std::string romPath, std::string sramPath)
         return false;
     }
 
+    irLink.flush();
     nds->SetNDSCart(std::move(cart));
     ndsSave = std::make_unique<SaveManager>(sramPath);
 
@@ -269,6 +270,7 @@ void MelonInstance::start()
 
 void MelonInstance::reset()
 {
+    irLink.flush();
     nds->Reset();
     setBatteryLevels();
     setDateTime();
@@ -567,6 +569,9 @@ bool MelonInstance::saveState(Savestate* state)
 
 bool MelonInstance::loadState(Savestate* state)
 {
+    // Also covers loadRewindState(), which loads through here
+    irLink.flush();
+
     if (!retroAchievementsManager->DoSavestate(state))
         return false;
 

@@ -567,6 +567,22 @@ namespace Platform
         return emulatorInstance->receiveNetPacket(data);
     }
 
+    void IR_SendPacket(const u8* data, int len, void* userdata)
+    {
+        auto emulatorInstance = (MelonDSAndroid::MelonInstance*) userdata;
+        if (emulatorInstance)
+            emulatorInstance->getIrLink().onGameSend(data, len);
+    }
+
+    int IR_RecvPacket(u8* data, int maxlen, void* userdata)
+    {
+        auto emulatorInstance = (MelonDSAndroid::MelonInstance*) userdata;
+        if (!emulatorInstance)
+            return 0;
+
+        return emulatorInstance->getIrLink().onGamePoll(data, maxlen);
+    }
+
     void Sleep(u64 usecs)
     {
         usleep(usecs);

@@ -5,6 +5,7 @@
 #include <string>
 #include "Args.h"
 #include "Configuration.h"
+#include "IrLink.h"
 #include "NDS.h"
 #include "MelonDS.h"
 #include "SaveManager.h"
@@ -54,6 +55,7 @@ public:
     void loadCheats(std::list<Cheat> cheats);
     int sendNetPacket(u8* data, int length);
     int receiveNetPacket(u8* data);
+    IrLink& getIrLink() { return irLink; }
 
     Frame* getPresentationFrame(std::optional<std::chrono::time_point<std::chrono::steady_clock>> deadline);
 
@@ -85,6 +87,7 @@ private:
     int consoleType;
     NDS* nds;
     std::shared_ptr<Net> net;
+    IrLink irLink;
 
     std::atomic<float> motionData[6] = { 0.0f, 0.0f, 9.80665f, 0.0f, 0.0f, 0.0f };
 

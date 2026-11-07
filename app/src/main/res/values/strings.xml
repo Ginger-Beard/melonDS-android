@@ -250,6 +250,12 @@
     <string name="volume_percentage">%1$d%%</string>
     <string name="audio_latency">Audio latency</string>
     <string name="microphone_source">Microphone source</string>
+    <string name="ir_link_mode">Infrared (IR) link</string>
+    <string name="ir_link_mode_summary">%s. Connects the infrared port of IR cartridges to a USB IR dongle, for HeartGold/SoulSilver Pokéwalker transfers.</string>
+    <string name="ir_dongle_connected">IR dongle connected (%1$s)</string>
+    <string name="ir_dongle_disconnected">IR dongle disconnected</string>
+    <string name="ir_dongle_unsupported">The connected USB device is not a supported IR dongle</string>
+    <string name="ir_dongle_permission_denied">USB permission denied for the IR dongle</string>
     <string name="controller_layout">Controller layout</string>
     <string name="category_save_files">Save Files</string>
     <string name="category_save_files_summary">Save file &amp; save state locations</string>
@@ -595,6 +601,11 @@
         <item>None</item>
         <item>Blow</item>
         <item>Device microphone</item>
+    </string-array>
+
+    <string-array name="ir_link_mode_options">
+        <item>Off</item>
+        <item>USB dongle</item>
     </string-array>
 
     <string-array name="soft_input_behaviour_options">

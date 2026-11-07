@@ -47,6 +47,8 @@ interface SettingsRepository {
     fun getAudioLatency(): AudioLatency
     fun getMicSource(): MicSource
 
+    fun getIrLinkMode(): IrLinkMode
+
     fun getRomSortingMode(): SortingMode
     fun getRomSortingOrder(): SortingOrder
     fun saveNextToRomFile(): Boolean

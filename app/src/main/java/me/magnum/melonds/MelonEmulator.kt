@@ -138,4 +138,16 @@ object MelonEmulator {
     external fun updateEmulatorConfiguration(emulatorConfiguration: EmulatorConfiguration)
 
     external fun updateMotionData(ax: Float, ay: Float, az: Float, rx: Float, ry: Float, rz: Float)
+
+    /**
+     * Connects the emulated IR transceiver to the frontend: packets transmitted by an IR cart are
+     * delivered to [me.magnum.melonds.ir.IrBridge.onIrTransmit].
+     */
+    external fun irAttach()
+
+    /** Disconnects the emulated IR transceiver and drops any pending received packets. */
+    external fun irDetach()
+
+    /** Delivers one complete IR packet received from the outside world, exactly as it was on the air. */
+    external fun irPushPacket(packet: ByteArray)
 }

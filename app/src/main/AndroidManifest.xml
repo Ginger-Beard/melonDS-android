@@ -3,6 +3,7 @@
         xmlns:tools="http://schemas.android.com/tools">
 
     <uses-feature android:name="android.hardware.camera.any" />
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -70,6 +71,20 @@
                 <action android:name="${applicationId}.LAUNCH_FIRMWARE" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+        </activity>
+        <!-- Invisible target for the USB IR dongle "open with" prompt (grants USB permission) -->
+        <activity
+            android:name=".ir.IrDongleAttachActivity"
+            android:theme="@android:style/Theme.NoDisplay"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
+                android:resource="@xml/ir_dongle_device_filter" />
         </activity>
         <activity
             android:name=".ui.dsiwaremanager.DSiWareManagerActivity"

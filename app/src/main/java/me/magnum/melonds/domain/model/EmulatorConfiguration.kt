@@ -27,5 +27,6 @@ data class EmulatorConfiguration(
         val audioLatency: AudioLatency,
         val micSource: MicSource,
         val firmwareConfiguration: FirmwareConfiguration,
-        val rendererConfiguration: RendererConfiguration
+        val rendererConfiguration: RendererConfiguration,
+        val irLinkMode: IrLinkMode = IrLinkMode.OFF,
 )

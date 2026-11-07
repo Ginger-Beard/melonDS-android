@@ -6,6 +6,7 @@
 #include "AndroidFileHandler.h"
 #include "AndroidCameraHandler.h"
 #include "Configuration.h"
+#include "IrLink.h"
 #include "MelonEventMessenger.h"
 #include "RewindManager.h"
 #include "RomGbaSlotConfig.h"
@@ -72,6 +73,15 @@ namespace MelonDSAndroid {
     extern bool takeScreenshot();
     extern void stop();
     extern void cleanup();
+
+    /**
+     * Sets where packets transmitted by an IR cart are sent. Applies to the current and to future
+     * emulator instances. A null sink detaches the transceiver.
+     */
+    extern void setIrTxSink(IrLink::TxSink sink);
+    extern void irPushPacket(const u8* data, int len);
+    extern void irFlush();
+    extern bool isIrLinkRecentlyActive();
 }
 
 #endif //MELONDS_MELONDS_H

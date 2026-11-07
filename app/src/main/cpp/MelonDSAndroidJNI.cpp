@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include <cstdlib>
 #include <time.h>
+#include <mutex>
+#include <vector>
 #include <MelonDS.h>
 #include <MelonDSAudio.h>
 #include <RomGbaSlotConfig.h>
@@ -34,6 +36,7 @@ enum GbaSlotType {
 };
 
 void* emulate(void*);
+void irTransmit(const u8* data, int len);
 MelonDSAndroid::RomGbaSlotConfig* buildGbaSlotConfig(GbaSlotType slotType, const char* romPath, const char* savePath);
 
 pthread_t emuThread;
@@ -53,6 +56,12 @@ bool isFastForwardEnabled = false;
 
 jobject globalCameraManager;
 MelonDSAndroidCameraHandler* androidCameraHandler;
+
+// IR transceiver bridge (me.magnum.melonds.ir.IrBridge.onIrTransmit). Resolved once and kept for the
+// lifetime of the process, so the emulator thread can never see a stale reference
+std::mutex irBridgeMutex;
+jclass irBridgeClass = nullptr;
+jmethodID irBridgeTransmitMethod = nullptr;
 
 static const int64_t FRAME_DURATION_60FPS_NS = 16666666;
 static const int64_t FRAME_DURATION_1000FPS_NS = 1000000; // 1ms. Used as frame time when fast-forward is enabled
@@ -322,6 +331,9 @@ Java_me_magnum_melonds_MelonEmulator_pauseEmulation(JNIEnv* env, jobject thiz)
 JNIEXPORT void JNICALL
 Java_me_magnum_melonds_MelonEmulator_resumeEmulation(JNIEnv* env, jobject thiz)
 {
+    // The real IR peer kept running while emulation was paused, so anything queued is stale
+    MelonDSAndroid::irFlush();
+
     if (started) {
         pthread_mutex_lock(&emuThreadMutex);
     }
@@ -548,6 +560,55 @@ Java_me_magnum_melonds_MelonEmulator_setMicrophoneEnabled(JNIEnv* env, jobject t
 }
 
 JNIEXPORT void JNICALL
+Java_me_magnum_melonds_MelonEmulator_irAttach(JNIEnv* env, jobject thiz)
+{
+    {
+        std::lock_guard<std::mutex> lock(irBridgeMutex);
+        if (irBridgeClass == nullptr) {
+            // Resolved on the calling Java thread, so the app's class loader is used. If the class or
+            // method is missing, the pending exception is thrown to the caller
+            jclass bridgeClass = env->FindClass("me/magnum/melonds/ir/IrBridge");
+            if (bridgeClass == nullptr)
+                return;
+
+            jmethodID transmitMethod = env->GetStaticMethodID(bridgeClass, "onIrTransmit", "([B)V");
+            if (transmitMethod == nullptr) {
+                env->DeleteLocalRef(bridgeClass);
+                return;
+            }
+
+            irBridgeClass = (jclass) env->NewGlobalRef(bridgeClass);
+            irBridgeTransmitMethod = transmitMethod;
+            env->DeleteLocalRef(bridgeClass);
+        }
+    }
+
+    MelonDSAndroid::setIrTxSink(irTransmit);
+}
+
+JNIEXPORT void JNICALL
+Java_me_magnum_melonds_MelonEmulator_irDetach(JNIEnv* env, jobject thiz)
+{
+    MelonDSAndroid::setIrTxSink(nullptr);
+    MelonDSAndroid::irFlush();
+}
+
+JNIEXPORT void JNICALL
+Java_me_magnum_melonds_MelonEmulator_irPushPacket(JNIEnv* env, jobject thiz, jbyteArray packet)
+{
+    if (packet == nullptr)
+        return;
+
+    jsize length = env->GetArrayLength(packet);
+    if (length <= 0)
+        return;
+
+    std::vector<u8> data(length);
+    env->GetByteArrayRegion(packet, 0, length, (jbyte*) data.data());
+    MelonDSAndroid::irPushPacket(data.data(), length);
+}
+
+JNIEXPORT void JNICALL
 Java_me_magnum_melonds_MelonEmulator_updateEmulatorConfiguration(JNIEnv* env, jobject thiz, jobject emulatorConfiguration)
 {
     MelonDSAndroid::EmulatorConfiguration newConfiguration = MelonDSAndroidConfiguration::buildEmulatorConfiguration(env, emulatorConfiguration);
@@ -656,12 +717,17 @@ void* emulate(void*)
         double currentTick = getCurrentMillis();
         double delay = currentTick - lastTick;
 
+        // Run at 1x while an IR link is in use: games time IR replies in emulated time, so
+        // fast-forward would shrink their reply deadlines below what a real peer can meet
+        bool irSpeedClamp = isFastForwardEnabled && MelonDSAndroid::isIrLinkRecentlyActive();
+        int frameTargetFps = irSpeedClamp ? 60 : targetFps;
+
         // All times are in ms
-        double frameTimeStep = (double) nLines / ((float) targetFps * 263.0) * 1000.0;
+        double frameTimeStep = (double) nLines / ((float) frameTargetFps * 263.0) * 1000.0;
         if (frameTimeStep < 1)
             frameTimeStep = 1;
 
-        if (limitFps)
+        if (limitFps || irSpeedClamp)
         {
             frameLimitError += frameTimeStep - delay;
             if (frameLimitError < -frameTimeStep)
@@ -704,4 +770,25 @@ void* emulate(void*)
 
     MelonDSAndroid::stop();
     pthread_exit(NULL);
+}
+
+void irTransmit(const u8* data, int len)
+{
+    // Called on the emulator thread, which the JniEnvHandler attaches to the JVM
+    JNIEnv* env = jniEnvHandler->getCurrentThreadEnv();
+    if (env == nullptr)
+        return;
+
+    jbyteArray packet = env->NewByteArray(len);
+    if (packet == nullptr) {
+        env->ExceptionClear();
+        return;
+    }
+
+    env->SetByteArrayRegion(packet, 0, len, (const jbyte*) data);
+    env->CallStaticVoidMethod(irBridgeClass, irBridgeTransmitMethod, packet);
+    if (env->ExceptionCheck())
+        env->ExceptionClear();
+
+    env->DeleteLocalRef(packet);
 }

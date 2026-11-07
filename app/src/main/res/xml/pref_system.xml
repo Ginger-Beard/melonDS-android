@@ -29,6 +29,15 @@
             app:iconSpaceReserved="false"
             android:defaultValue="false" />
 
+    <ListPreference
+            android:key="ir_link_mode"
+            android:title="@string/ir_link_mode"
+            android:summary="@string/ir_link_mode_summary"
+            app:iconSpaceReserved="false"
+            android:entries="@array/ir_link_mode_options"
+            android:entryValues="@array/ir_link_mode_values"
+            android:defaultValue="off" />
+
     <Preference
             android:key="backup_internal_layout"
             android:title="@string/backup_internal_layout"
